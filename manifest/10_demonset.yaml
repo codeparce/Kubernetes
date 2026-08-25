@@ -1,0 +1,30 @@
+## Utilizado para agentes de infraestructura
+## para logs
+## Se asegura de levantara pods en cada nodo que tengas
+## ej: kubectl get ds -A
+
+apiVersion: apps/v1
+kind: DeamonSet
+metadata:
+  name: myapp
+spec:
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: codeparce/blue-green-app:blue
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+          request:
+            memory: "128Mi"
+            cpu: "50m"
+        ports:
+        - containerPort: 80

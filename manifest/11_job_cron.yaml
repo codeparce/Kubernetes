@@ -1,0 +1,43 @@
+## job es una tarea que tiene 
+## una fecha de expiracion
+## hace algo en concreto y se muere 
+
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   namespace: examples
+#   name: piJob
+# spec:
+#   template:
+#     spec:
+#       containers:
+#       - name: piJob
+#         image: perl:5.34.0
+#         command: ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+#       restartPolicy: Never
+#   backoffLimit: 4
+
+---
+## Un cronJob tonces seria una tarea que se ejcuta
+## cada cierto tiempo
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  namespace: examples
+  name: myjob
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox:1.28
+            command: 
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+ 

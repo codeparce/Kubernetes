@@ -1,0 +1,84 @@
+# Sesión 9.3 — Demo: Postgres + PVC + EBS (autocontenido)
+#
+# Un solo apply: StorageClass aws-ebs-gp3 + PVC + Deployment.
+# Borrar el Pod y ver que los datos siguen.
+#
+# Prerrequisito driver: comentarios en sesion-9.2-pvc-storageclass.yaml
+#
+#   kubectl apply -f sesion-9.3-demo-postgres-pvc.yaml
+#   kubectl get pvc,pods -l app=demo-db
+#   POD=$(kubectl get pod -l app=demo-db -o jsonpath='{.items[0].metadata.name}')
+#   kubectl exec -it "$POD" -- psql -U demo -d demo -c \
+#     "CREATE TABLE pedidos (id serial primary key, producto text);
+#      INSERT INTO pedidos (producto) VALUES ('laptop');
+#      SELECT * FROM pedidos;"
+#   kubectl delete pod -l app=demo-db
+#   kubectl wait --for=condition=ready pod -l app=demo-db --timeout=180s
+#   POD=$(kubectl get pod -l app=demo-db -o jsonpath='{.items[0].metadata.name}')
+#   kubectl exec -it "$POD" -- psql -U demo -d demo -c "SELECT * FROM pedidos;"
+#   kubectl delete -f sesion-9.3-demo-postgres-pvc.yaml
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: aws-ebs-gp3
+provisioner: ebs.csi.eks.amazonaws.com
+parameters:
+  type: gp3
+  fsType: ext4
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: db-pvc
+  labels:
+    app: demo-db
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: aws-ebs-gp3
+  resources:
+    requests:
+      storage: 4Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-db
+  labels:
+    app: demo-db
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: demo-db
+  template:
+    metadata:
+      labels:
+        app: demo-db
+    spec:
+      containers:
+        - name: db
+          image: postgres:18-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: demo
+            - name: POSTGRES_USER
+              value: demo
+            - name: POSTGRES_PASSWORD
+              value: demopass
+            # Subcarpeta: Postgres no inicia si el mount root no está vacío
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: db-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-storage
+          persistentVolumeClaim:
+            claimName: db-pvc

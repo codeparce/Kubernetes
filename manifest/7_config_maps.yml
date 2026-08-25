@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blue-green-app-cm
+  namespace: examples
+  labels:
+    name: blue-green-app
+data:
+  MY_ENV = http://myap.lavb
+  DESC = TestMap
+
+
